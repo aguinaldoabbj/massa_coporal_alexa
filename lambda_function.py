@@ -5,6 +5,7 @@
 # session persistence, api calls, and more.
 # This sample is built using the handler classes approach in skill builder.
 import logging
+import random
 import ask_sdk_core.utils as ask_utils
 
 from ask_sdk_core.skill_builder import SkillBuilder
@@ -17,18 +18,30 @@ from ask_sdk_model import Response
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
+SKILL_NAME = "Massa Corporal"
 
-def table_imc(resultado):
-    if resultado < 19:
-        return "Você está abaixo do peso."
-    elif resultado >= 19 and resultado < 25:
-        return "Você está com o peso normal."
-    elif resultado >= 25 and resultado < 30:
-        return "Você está com sobrepeso."
-    elif resultado >= 30 and resultado < 40:
-        return "Você está com obsidade tipo 1."
-    else: 
-        return "você vai morrer nos próximos minutos."
+def table_imc(imc):
+    if imc < 16:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de baixo peso severo."
+    elif imc >= 16 and imc < 17:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de baixo peso moderado."
+    elif imc >= 17 and imc < 18.5:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de baixo peso leve."
+    elif imc >= 18.5 and imc < 25:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é considerado saudável."
+    elif imc >= 25 and imc < 30:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de sobrepeso."
+    elif imc >= 30 and imc < 35:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de obesidade (grau 1)."
+    elif imc >= 35 and imc < 40:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de obesidade severa (grau 2)."
+    else:
+        return "Segundo a Organização Mundial da Saúde, seu estado nutricional é de obesidade mórbida (grau 3)."
+
+instructions_ = ["O cálculo do seu índice de massa corporal poderá ser ativado quando você perguntar: estou gôrdo?",
+                 "Você pode ativar o cálculo do IMC falando: calcular meu IMC.",
+                 "Você pode responder simplesmente sim à essa pergunta.",
+                ]  
 
 class LaunchRequestHandler(AbstractRequestHandler):
     """Handler for Skill Launch."""
@@ -39,112 +52,96 @@ class LaunchRequestHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "Módulo IMC disponível"
+        speak_output = "Você está em " + SKILL_NAME + ". Vamos calcular o seu índice de massa corporal (IMC)?"
+        return (
+            handler_input.response_builder
+                .speak(speak_output)
+                .ask(instructions_[random.randint(0,len(instructions_)-1)])
+                .response
+        )
+
+class greetingIntentHandler(AbstractRequestHandler):
+    """Handler for Hello World Intent."""
+    def can_handle(self, handler_input):
+        # type: (HandlerInput) -> bool
+        return ask_utils.is_intent_name("greetingIntent")(handler_input)
+
+    def handle(self, handler_input):
+        # type: (HandlerInput) -> Response
+        speak_output = "Olá! Vamos calcular o seu índice de massa corporal?"
 
         return (
             handler_input.response_builder
                 .speak(speak_output)
-                .ask(speak_output)
+                .ask("Desculpe, não entendi. Você pode ativar o cálculo perguntando, por exemplo: qual meu IMC?")
                 .response
-        )
+        )        
 
-
-
-class SaudacaoIntentHandler(AbstractRequestHandler):
+class imcIntentHandler(AbstractRequestHandler):
     """Handler for Hello World Intent."""
     def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("SaudacaoIntent")(handler_input)
+        # type: (HandlerInput) -> bool
+        return ask_utils.is_intent_name("imcIntent")(handler_input)
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "Olá!"
-        
-        return (
-            handler_input.response_builder
-                .speak(speak_output)
-                .ask(speak_output)
-                .response
-        )
-
-
-class GordoIntentHandler(AbstractRequestHandler):
-    """Handler for Hello World Intent."""
-    def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("GordoIntent")(handler_input)
-
-    def handle(self, handler_input):
-        # type: (HandlerInput) -> Response
-        speak_output = "OK. Qual o seu peso?"
+        speak_output = "Ok! Vamos calcular o seu IMC. Qual a sua altura em centímetros?"
 
         return (
             handler_input.response_builder
                 .speak(speak_output)
-                .ask("Qual o seu peso?")
+                .ask("Desculpe. Qual a sua altura em centímetros?")
                 .response
         )
 
-
-class PesoIntentHandler(AbstractRequestHandler):
+class heightIntentHandler(AbstractRequestHandler):
     """Handler for Hello World Intent."""
     def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("PesoIntent")(handler_input)
+        # type: (HandlerInput) -> bool
+        return ask_utils.is_intent_name("heightIntent")(handler_input)
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "Qual sua altura ?"
-        
         slots = handler_input.request_envelope.request.intent.slots
-        peso = slots['peso'].value
+        heigth = int(slots['heigth'].value)
         
         session_attr = handler_input.attributes_manager.session_attributes
+        session_attr["height_imc"] = heigth
         
-        session_attr["peso_imc"] = float(peso)
-        
-        texto = "Você tem " + str(session_attr["peso_imc"]) + " quilos. "
-        
-        texto += speak_output
-        
+        speak_output = "Certo. Você tem " + str(heigth) + " centímetros de altura. E qual seu peso em quilos?"
+
         return (
             handler_input.response_builder
-                .speak(texto)
-                .ask(speak_output)
+                .speak(speak_output)
+                .ask("Desculpe. Qual seu peso em quilos?")
                 .response
         )
 
-
-class AlturaIntentHandler(AbstractRequestHandler):
+class weightIntentHandler(AbstractRequestHandler):
     """Handler for Hello World Intent."""
     def can_handle(self, handler_input):
-        return ask_utils.is_intent_name("AlturaIntent")(handler_input)
+        # type: (HandlerInput) -> bool
+        return ask_utils.is_intent_name("weightIntent")(handler_input)
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "Qual sua altura ?"
-        
-        
         slots = handler_input.request_envelope.request.intent.slots
-        altura = slots['altura'].value
-        
-        altura = float(altura) / 100
+        weight = int(slots['weight'].value)
         
         session_attr = handler_input.attributes_manager.session_attributes
+        heigth = session_attr["height_imc"]/100
         
-        if "peso_imc" in session_attr:
-            peso = session_attr["peso_imc"]
-        else:
-            peso=1
+        imc = weight / pow(heigth, 2)
+        imc = round(imc,2)
         
-        resultado = peso / pow(altura, 2)
-        
-        texto = "Seu IMC é  " + str(round(resultado, 2)) +". " + table_imc(round(resultado, 2))
-        
+        speak_output = "Certo. Você pesa " + str(weight) + " quilos. Então, o seu IMC é " + str(imc) + ". " + table_imc(imc)
+
         return (
             handler_input.response_builder
-                .speak(texto)
-                .ask(speak_output)
+                .speak(speak_output)
+                .ask("Desculpe. Qual seu peso em quilos?")
                 .response
         )
-
 
 
 class HelpIntentHandler(AbstractRequestHandler):
@@ -155,7 +152,7 @@ class HelpIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "You can say hello to me! How can I help?"
+        speak_output = "O cálculo do seu índice de massa corporal poderá ser ativado quando você perguntar: estou gôrdo?"
 
         return (
             handler_input.response_builder
@@ -174,7 +171,7 @@ class CancelOrStopIntentHandler(AbstractRequestHandler):
 
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
-        speak_output = "Goodbye!"
+        speak_output = "Até a próxima!"
 
         return (
             handler_input.response_builder
@@ -210,12 +207,13 @@ class IntentReflectorHandler(AbstractRequestHandler):
     def handle(self, handler_input):
         # type: (HandlerInput) -> Response
         intent_name = ask_utils.get_intent_name(handler_input)
-        speak_output = "You just triggered " + intent_name + "."
+        #speak_output = "You just triggered " + intent_name + "."
+        speak_output = "Desculpe. Tive um problema. Por favor, recomece."
 
         return (
             handler_input.response_builder
                 .speak(speak_output)
-                # .ask("add a reprompt if you want to keep the session open for the user to respond")
+                # ".ask("add a reprompt if you want to keep the session open for the user to respond")"
                 .response
         )
 
@@ -233,7 +231,7 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
         # type: (HandlerInput, Exception) -> Response
         logger.error(exception, exc_info=True)
 
-        speak_output = "Sorry, I had trouble doing what you asked. Please try again."
+        speak_output = "Desculpe. Tive problemas. Podemos recomeçar?"
 
         return (
             handler_input.response_builder
@@ -250,10 +248,10 @@ class CatchAllExceptionHandler(AbstractExceptionHandler):
 sb = SkillBuilder()
 
 sb.add_request_handler(LaunchRequestHandler())
-sb.add_request_handler(SaudacaoIntentHandler())
-sb.add_request_handler(GordoIntentHandler())
-sb.add_request_handler(PesoIntentHandler())
-sb.add_request_handler(AlturaIntentHandler())
+sb.add_request_handler(greetingIntentHandler())
+sb.add_request_handler(imcIntentHandler())
+sb.add_request_handler(heightIntentHandler())
+sb.add_request_handler(weightIntentHandler())
 sb.add_request_handler(HelpIntentHandler())
 sb.add_request_handler(CancelOrStopIntentHandler())
 sb.add_request_handler(SessionEndedRequestHandler())
